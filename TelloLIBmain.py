@@ -1,12 +1,14 @@
 # http://www.ryzerobotics.com/
-import threading 
-import socket
-import cv2
-import constant
+# https://dl-cdn.ryzerobotics.com/downloads/tello/20180910/Tello%20SDK%20Documentation%20EN_1.3.pdf
+
+import threading
+import socket #for connecting wirelessly
+import cv2 #required for video feed
+import TelloLIBconsts as constant #contains constants see "TelloLIBconsts.py"
 
 #class that contains all the data for the TelloSDK instance
 class telloSDK:
-    def __init__(self, port = 8889, host = ''):
+    def __init__(self, port = 8889, host = ''):  #don't change the ports
         self.running = True
 
         self.port = port
@@ -16,8 +18,11 @@ class telloSDK:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.Dsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        self.tello_address = (constant.TELLO_IP, port) #change TELLO_IP to LOCAL_IP if testing without drone
-
+        if constant.USING_DRONE:  #for testing without drone
+            self.tello_address = (constant.TELLO_IP, port)
+        else:
+            self.tello_address = (constant.LOCAL_IP, port)
+            
         self.sock.bind((constant.LOCAL_IP, port))
 
         self.stats_port = 8890
@@ -36,26 +41,26 @@ class telloSDK:
         self.response = None
         self.Bframe = None
 
-        #don't access these directly !!!!!!!!!! (thank you python for not having private variables)
-        self.pitch = None
-        self.roll = None
-        self.yaw = None
-        self.xSpeed = None
-        self.ySpeed = None
-        self.zSpeed = None
-        self.lowTemp = None
-        self.highTemp = None
-        self.TOFdist = None
-        self.height = None
-        self.battery = None
-        self.barometer = None
-        self.Mtime = None
-        self.xAccel = None
-        self.yAccel = None
-        self.zAccel = None
+        #don't access these directly !!!!!!!!!!
+        self.__pitch = None
+        self.__roll = None
+        self.__yaw = None
+        self.__xSpeed = None
+        self.__ySpeed = None
+        self.__zSpeed = None
+        self.__lowTemp = None
+        self.__highTemp = None
+        self.__TOFdist = None
+        self.__height = None
+        self.__battery = None
+        self.__barometer = None
+        self.__Mtime = None
+        self.__xAccel = None
+        self.__yAccel = None
+        self.__zAccel = None
         #You can some touch other things but not these
 
-        self.command_timeout = 0.3
+        self.command_timeout = constant.TIME_OUT #timeout for commands, change to whatever
 
         #create recieve thread
         self.recvThread = threading.Thread(target=self.recv)
@@ -64,12 +69,15 @@ class telloSDK:
         self.sendMessage("command") #needed to be in command mode
         self.sendMessage("streamon") #starts video stream
 
-        self.recvStats = threading.Thread(target=self.recvDat) #comment this line and the next line if testing without drone
-        self.recvStats.start()
+        if constant.USING_DRONE:
+            self.recvStats = threading.Thread(target=self.recvDat)
+            self.recvStats.start()
 
         self.ret = False
-        self.telloVideo = cv2.VideoCapture("udp://@" + constant.TELLO_IP + ":" + str(self.local_video_port))
-        #self.telloVideo = cv2.VideoCapture("test.mp4") #used for testing when Tello not present
+        if constant.USING_DRONE:
+            self.telloVideo = cv2.VideoCapture("udp://@" + constant.TELLO_IP + ":" + str(self.local_video_port))
+        else:
+            self.telloVideo = cv2.VideoCapture("test.mp4") #used for testing when Tello not present
         self.scale = 3
 
         #create video thread
@@ -123,22 +131,22 @@ class telloSDK:
                 for string in splitonce:
                     splittwice.append(string.split(':')) #split the split response into pairs of variable name and data
             
-                self.pitch = int(splittwice[0][1])
-                self.roll = int(splittwice[1][1])
-                self.yaw = int(splittwice[2][1])
-                self.xSpeed = int(splittwice[3][1])
-                self.ySpeed = int(splittwice[4][1])
-                self.zSpeed = int(splittwice[5][1])
-                self.lowTemp = int(splittwice[6][1])
-                self.highTemp = int(splittwice[7][1])
-                self.TOFdist = int(splittwice[8][1])
-                self.height = int(splittwice[9][1])
-                self.battery = int(splittwice[10][1])
-                self.barometer = float(splittwice[11][1])
-                self.Mtime = float(splittwice[12][1])
-                self.xAccel = float(splittwice[13][1])
-                self.yAccel = float(splittwice[14][1])
-                self.zAccel = float(splittwice[15][1])
+                self.__pitch = int(splittwice[0][1])
+                self.__roll = int(splittwice[1][1])
+                self.__yaw = int(splittwice[2][1])
+                self.__xSpeed = int(splittwice[3][1])
+                self.__ySpeed = int(splittwice[4][1])
+                self.__zSpeed = int(splittwice[5][1])
+                self.__lowTemp = int(splittwice[6][1])
+                self.__highTemp = int(splittwice[7][1])
+                self.__TOFdist = int(splittwice[8][1])
+                self.__height = int(splittwice[9][1])
+                self.__battery = int(splittwice[10][1])
+                self.__barometer = float(splittwice[11][1])
+                self.__Mtime = float(splittwice[12][1])
+                self.__xAccel = float(splittwice[13][1])
+                self.__yAccel = float(splittwice[14][1])
+                self.__zAccel = float(splittwice[15][1])
 
                 self.datLock.release()
             except Exception as e:
@@ -162,11 +170,11 @@ class telloSDK:
     #returns a dictionary of all the data
     def getDat(self):
         self.datLock.acquire()
-        out = {"pitch":self.pitch, "roll":self.roll, "yaw":self.yaw, #attitude
-                "xSpeed":self.xSpeed, "ySpeed":self.ySpeed, "zSpeed":self.zSpeed, #speeds
-                "lowestTemp":self.lowTemp, "highestTemp":self.highTemp, "barometer":self.barometer, #environment data
-                "TOF":self.TOFdist, "battery%":self.battery, "motorTime":self.Mtime,"height":self.height, #flight data
-                "xAccel":self.xAccel, "yAccel":self.yAccel, "zAccel":self.zAccel} #acceleration data
+        out = {"pitch":self.__pitch, "roll":self.__roll, "yaw":self.__yaw, #attitude
+                "xSpeed":self.__xSpeed, "ySpeed":self.__ySpeed, "zSpeed":self.__zSpeed, #speeds
+                "lowestTemp":self.__lowTemp, "highestTemp":self.__highTemp, "barometer":self.__barometer, #environment data
+                "TOF":self.__TOFdist, "battery%":self.__battery, "motorTime":self.__Mtime,"height":self.__height, #flight data
+                "xAccel":self.__xAccel, "yAccel":self.__yAccel, "zAccel":self.__zAccel} #acceleration data
         self.datLock.release()
         return out
 
@@ -186,7 +194,7 @@ class telloSDK:
                         new_h=int(height/self.scale)
                         new_w=int(width/self.scale)
                         self.Bframe = cv2.resize(frame, (new_w, new_h)) #resizes image
-                        #cv2.imwrite("opt.png", self.Bframe)
+                        #cv2.imwrite("opt.png", self.Bframe) #creates an image of what is being processed (very slow, use only for testing)
                         self.mutexLock.release()
 
                         self.startWait.acquire()
@@ -245,7 +253,7 @@ class telloSDK:
     def end(self, errorNum = 0):
         self.endLock.acquire() #prevents several threads using end() at the same time
         if self.running:
-            self.sendMessage("land")
+            self.sendMessage("land") #lands the drone, very important
             self.running = False
             if(self.recvThread.is_alive):
                 self.recvThread.join
@@ -255,5 +263,5 @@ class telloSDK:
             #prints the exit code
             print("Ended Tello: " + constant.END_NUMS.get(errorNum, "ERROR NUM DOES NOT EXIST: "+str(errorNum)))
         else:
-            print("Attempted To End Already Ended Tello Instance With Code " + str(errorNum))
+            print("Attempted To End Already Ended Tello Instance With Code " + str(errorNum)) #this usually gets triggered, don't worry about it
         self.endLock.release()
