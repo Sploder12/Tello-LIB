@@ -14,4 +14,4 @@ HOST_NAME = socket.gethostname()
 LOCAL_IP = socket.gethostbyname(HOST_NAME)
 TELLO_IP = "192.168.10.1"
 
-USING_DRONE = True
+USING_DRONE = False
