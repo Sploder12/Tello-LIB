@@ -1,6 +1,6 @@
 import TelloLIBmain
 
-instance = telloSDK()
+instance = TelloLIBmain.telloSDK()
 
 instance.sendMessage("takeoff")
 
