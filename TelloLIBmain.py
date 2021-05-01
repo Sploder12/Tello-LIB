@@ -112,7 +112,8 @@ class telloSDK:
                     self.sock.close()
                     self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                     self.sock.bind((constant.LOCAL_IP, self.port))
-
+                elif(type(e) == UnicodeDecodeError):
+                    print("bad response")
                 elif(self.running):
                     print(e)
                     self.end(-2)
