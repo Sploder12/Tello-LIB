@@ -106,17 +106,17 @@ class telloSDK:
                 self.msgWait.acquire()
                 self.msgWait.notify() #tell the main thread it can wake up
                 self.msgWait.release()
-            except Exception as e:
-                if(type(e) == ConnectionResetError):
-                    print("Reseting Receive Data Connection")
-                    self.sock.close()
-                    self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    self.sock.bind((constant.LOCAL_IP, self.port))
-                elif(type(e) == UnicodeDecodeError):
-                    print("bad response")
-                elif(self.running):
-                    print(e)
-                    self.end(-2)
+            except ConnectionResetError:
+                print("Reseting Receive Data Connection")
+                self.sock.close()
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self.sock.bind((constant.LOCAL_IP, self.port))
+            except UnicodeDecodeError:
+                print("bad response")
+            except:
+                print("Unexpected Error")
+                self.end(-2)
+                    
     
     def recvDat(self):
         while self.recvStats.is_alive and self.running:
@@ -150,17 +150,21 @@ class telloSDK:
                 self.__zAccel = float(splittwice[15][1])
 
                 self.datLock.release()
-            except Exception as e:
-                self.datLock.release()
-                if(type(e) == ConnectionResetError):
+            except ConnectionRefusedError:
+                    self.datLock.release()
                     print("Reseting Data Receive Data Connection")
                     self.sock.close()
                     self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                     self.sock.bind((constant.LOCAL_IP, self.port))
-
-                elif(self.running):
-                    print("Data retrieve error: " + str(e))
+            except:
+                self.datLock.release()
+                if(self.running):
+                    print("Data retrieve error")
                     self.end(-2)
+
+                    
+
+                
                 
     def getRawDat(self):
         self.datLock.acquire()
