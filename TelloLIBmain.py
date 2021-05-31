@@ -114,8 +114,8 @@ class telloSDK:
             except UnicodeDecodeError:
                 print("bad response")
             except:
-                print("Unexpected Error")
-                self.end(-2)
+                print("Unexpected Error, unless it's a UnicodeDecodeError in which case Python is just being a sorry excuse for a language.")
+                #self.end(-2) #Fix! now with 100% more hatred towards Python
                     
     
     def recvDat(self):
